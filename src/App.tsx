@@ -178,6 +178,85 @@ export default function App() {
   };
 
   const renderContent = () => {
+    if (!role) {
+      return (
+        <div className="h-full bg-primary flex flex-col pt-20 px-6 text-center text-white">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-accent w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-accent/40"
+          >
+            <span className="font-poppins font-bold text-4xl">Q</span>
+          </motion.div>
+          
+          <h1 className="text-3xl font-poppins font-bold mb-2">Partner Hub</h1>
+          <p className="text-white/40 mb-12 text-sm font-medium uppercase tracking-[0.2em]">Pakistan's Delivery Engine</p>
+          
+          <div className="space-y-4">
+            <button 
+              onClick={() => handleRegistration('vendor')}
+              className="w-full bg-white text-primary p-5 rounded-3xl font-bold flex items-center justify-between active:scale-95 transition-all shadow-xl"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="bg-primary/5 p-3 rounded-2xl">
+                  <Store className="w-6 h-6" />
+                </div>
+                <div className="text-left leading-tight">
+                  <div className="text-base">Merchant</div>
+                  <div className="text-[9px] opacity-40 uppercase tracking-widest font-bold mt-0.5">Manage Store</div>
+                </div>
+              </div>
+              <UserPlus className="w-5 h-5 opacity-20" />
+            </button>
+
+            <button 
+              onClick={() => handleRegistration('rider')}
+              className="w-full bg-white/5 border border-white/10 text-white p-5 rounded-3xl font-bold flex items-center justify-between active:scale-95 transition-all"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/10 p-3 rounded-2xl">
+                  <Map className="w-6 h-6" />
+                </div>
+                <div className="text-left leading-tight">
+                  <div className="text-base">Delivery Rider</div>
+                  <div className="text-[9px] opacity-40 uppercase tracking-widest font-bold mt-0.5">Earn on Road</div>
+                </div>
+              </div>
+              <UserPlus className="w-5 h-5 opacity-20" />
+            </button>
+          </div>
+          
+          <div className="mt-auto pb-12">
+            <p className="text-[8px] text-white/20 uppercase tracking-[0.3em] font-bold italic font-poppins">Delivered Before You Blink</p>
+          </div>
+
+          {showInstallTip && (
+            <motion.div 
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              className="mb-8 bg-white text-primary p-4 rounded-3xl shadow-2xl border border-accent/20 flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-accent p-2.5 rounded-2xl text-white">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-bold">Native Experience</div>
+                  <div className="text-[9px] opacity-70 uppercase tracking-tight">Add to home screen</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowInstallTip(false)}
+                className="text-primary/20 p-2"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </div>
+      );
+    }
+
     if (role === 'vendor') {
       switch (activeTab) {
         case 'dashboard': return <VendorDashboard />;
@@ -195,53 +274,69 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary overflow-x-hidden">
-      {/* Mobile Header Shell */}
-      {activeTab !== 'settings' && (
-        <Header 
-          role={role} 
-          onRoleSwitch={() => setRole(role === 'vendor' ? 'rider' : 'vendor')} 
-          onLogout={handleLogout}
-        />
-      )}
-      
-      {/* Mobile-First Main View */}
-      <main className={`min-h-screen ${activeTab === 'settings' ? '' : 'pb-24 pt-4'}`}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab + role}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+    <div className="min-h-screen bg-[#F0F2F5] flex justify-center p-0 md:p-6 lg:p-12 selection:bg-accent/30">
+      {/* 
+          The Master Native Container Shell
+          Enforces the mobile-app aspect ratio (Pixel 7 / iPhone 14-ish)
+      */}
+      <div className="w-full max-w-[440px] bg-secondary min-h-screen md:min-h-[850px] md:h-[850px] md:rounded-[3.5rem] md:shadow-[0_0_0_12px_rgba(20,20,30,1),0_30px_60px_rgba(0,0,0,0.4),0_0_100px_rgba(242,125,38,0.1)] relative overflow-hidden flex flex-col border-0">
+        
+        {/* Mobile Header Shell - Only visible when logged in and not in settings */}
+        {role && activeTab !== 'settings' && (
+          <Header 
+            role={role} 
+            onRoleSwitch={() => setRole(role === 'vendor' ? 'rider' : 'vendor')} 
+            onLogout={handleLogout}
+          />
+        )}
+        
+        {/* Mobile-First Main View Viewport */}
+        <main 
+          className={`flex-1 overflow-y-auto scrollbar-hide bg-secondary relative ${
+            role && activeTab !== 'settings' ? 'pb-24' : ''
+          }`}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={(activeTab || 'auth') + (role || 'none')}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="min-h-full"
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </main>
 
-      {/* Floating App Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex justify-around items-center p-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] h-20 px-6">
-        {navItems[role].map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all relative ${
-              activeTab === item.id ? 'text-accent' : 'text-text-secondary opacity-50'
-            }`}
-          >
-            {activeTab === item.id && (
-              <motion.div 
-                layoutId="activeTabGlow"
-                className="absolute inset-0 bg-accent/10 rounded-2xl -z-10"
-                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-              />
-            )}
-            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'scale-110' : ''} transition-transform`} />
-            <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">{item.label}</span>
-          </button>
-        ))}
-      </nav>
+        {/* Floating App Navigation - Only when logged in */}
+        {role && (
+          <nav className="absolute bottom-6 left-5 right-5 h-20 bg-white/60 backdrop-blur-3xl border border-white/40 flex justify-around items-center z-50 rounded-[2.5rem] shadow-[0_15px_35px_rgba(0,0,0,0.1)] px-4">
+            {navItems[role].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all relative ${
+                  activeTab === item.id ? 'text-primary' : 'text-text-secondary opacity-30'
+                }`}
+              >
+                {activeTab === item.id && (
+                  <motion.div 
+                    layoutId="activeTabGlow"
+                    className="absolute inset-0 bg-accent rounded-[1.2rem] -z-10"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white scale-110' : 'scale-90'} transition-transform`} />
+                {activeTab !== item.id && (
+                  <span className="text-[7px] font-bold mt-1 uppercase tracking-widest">{item.label}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+        )}
+      </div>
     </div>
   );
 }
