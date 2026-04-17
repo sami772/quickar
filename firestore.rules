@@ -2,39 +2,111 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuthenticated() {
-      return request.auth != null;
+    // 0. Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // --- Reusable Global Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // --- Entity Specific Validators ---
+
+    function isValidRider(data) {
+      return data.keys().hasAll(['id', 'email', 'dailyDeliveries', 'weeklyDeliveries', 'totalEarnings', 'currentIncentiveTier', 'lastResetDate'])
+        && data.id is string
+        && data.email is string
+        && data.dailyDeliveries is number
+        && data.totalEarnings is number;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && (
-        (request.auth.token.email == "samiranaskp786@gmail.com" && request.auth.token.email_verified == true) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+    function isValidVendor(data) {
+      return data.keys().hasAll(['id', 'email', 'plan', 'dailyOrderCount', 'lastResetDate'])
+        && data.id is string && data.id.size() <= 128
+        && data.email is string && data.email.size() <= 200
+        && data.plan in ['free', 'pro']
+        && data.dailyOrderCount is number && data.dailyOrderCount >= 0
+        && data.lastResetDate is string && data.lastResetDate.size() <= 20;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['customerName', 'address', 'total', 'status', 'createdAt', 'vendorId'])
+        && data.customerName is string && data.customerName.size() <= 100
+        && data.address is string && data.address.size() <= 500
+        && data.total is number && data.total >= 0
+        && data.status in ['placed', 'accepted', 'picked', 'out_for_delivery', 'delivered', 'cancelled']
+        && data.createdAt is string
+        && data.vendorId is string && data.vendorId.size() <= 128;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'price', 'stock', 'category', 'vendorId'])
+        && data.name is string && data.name.size() <= 100
+        && data.price is number && data.price >= 0
+        && data.vendorId is string;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'roles', 'displayName'])
+        && data.id is string
+        && data.roles is list
+        && data.displayName is string;
+    }
+
+    // --- Collection Routes ---
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isVerified() && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['roles', 'updatedAt'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['displayName']))
       );
     }
 
-    match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+    match /vendors/{vendorId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(vendorId) && isVerified() && isValidVendor(incoming());
+      allow update: if isOwner(vendorId) && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['dailyOrderCount', 'lastResetDate']) && incoming().dailyOrderCount is number) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['plan']) && incoming().plan in ['free', 'pro']) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['isSponsored']) && incoming().isSponsored is bool)
+      );
     }
 
-    match /orders/{orderId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+    match /riders/{riderId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(riderId) && isVerified() && isValidRider(incoming());
+      allow update: if isOwner(riderId) || isSignedIn(); 
     }
 
     match /products/{productId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isOwner(incoming().vendorId) && isValidProduct(incoming());
+      allow update, delete: if isOwner(existing().vendorId);
+    }
+
+    match /orders/{orderId} {
+      allow read: if isSignedIn();
+      
+      // Strict rule for order creation: Must be a verified vendor and have a profile
+      allow create: if isVerified() 
+        && isOwner(incoming().vendorId) 
+        && isValidOrder(incoming())
+        && exists(/databases/$(database)/documents/vendors/$(incoming().vendorId));
+
+      allow update: if isSignedIn() && (
+        // Action: Vendor updates status (Accept/Cancel)
+        (isOwner(existing().vendorId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        
+        // Action: Rider updates status (Picked/Delivered) or location
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'riderId', 'riderCoords']))
+      );
     }
   }
 }

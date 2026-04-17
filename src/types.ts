@@ -5,6 +5,36 @@
 
 export type UserRole = 'vendor' | 'rider';
 
+export type SubscriptionPlan = 'free' | 'pro';
+
+export interface UserProfile {
+  id: string;
+  roles: UserRole[];
+  displayName: string;
+}
+
+export interface VendorProfile {
+  id: string;
+  name: string;
+  email: string;
+  plan: SubscriptionPlan;
+  dailyOrderCount: number;
+  isSponsored?: boolean;
+  lastResetDate: string; // ISO date to reset daily limit
+}
+
+export interface RiderProfile {
+  id: string;
+  name: string;
+  email: string;
+  isOnline: boolean;
+  dailyDeliveries: number;
+  weeklyDeliveries: number;
+  totalEarnings: number;
+  currentIncentiveTier: number;
+  lastResetDate: string;
+}
+
 export interface Order {
   id: string;
   customerName: string;
@@ -16,7 +46,20 @@ export interface Order {
   createdAt: string;
   vendorId: string;
   riderId?: string;
-  coordinates?: {
+  isPriority?: boolean;
+  isSponsored?: boolean; // New: Sponsored dispatch
+  surgeMultiplier?: number; // New: Surge pricing
+  deliveryFee?: number; // New: Dynamically calculated fee
+  expiresAt?: string; // New: Expiration timer
+  pickupCoords?: {
+    lat: number;
+    lng: number;
+  };
+  deliveryCoords?: {
+    lat: number;
+    lng: number;
+  };
+  riderCoords?: {
     lat: number;
     lng: number;
   };

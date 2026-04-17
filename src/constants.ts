@@ -19,7 +19,8 @@ export const MOCK_ORDERS: Order[] = [
     status: 'placed',
     createdAt: new Date().toISOString(),
     vendorId: 'V1',
-    coordinates: { lat: 31.48, lng: 74.38 }
+    pickupCoords: { lat: 31.52, lng: 74.35 },
+    deliveryCoords: { lat: 31.48, lng: 74.38 }
   },
   {
     id: 'ORD-002',
@@ -35,7 +36,8 @@ export const MOCK_ORDERS: Order[] = [
     createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
     vendorId: 'V1',
     riderId: 'R1',
-    coordinates: { lat: 31.49, lng: 74.35 }
+    pickupCoords: { lat: 31.52, lng: 74.35 },
+    deliveryCoords: { lat: 31.49, lng: 74.35 }
   }
 ];
 

@@ -27,7 +27,22 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "vendorId": { "type": "string" },
         "riderId": { "type": "string" },
-        "coordinates": {
+        "isPriority": { "type": "boolean" },
+        "pickupCoords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "deliveryCoords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "riderCoords": {
           "type": "object",
           "properties": {
             "lat": { "type": "number" },
@@ -36,6 +51,20 @@
         }
       },
       "required": ["id", "customerName", "address", "total", "status", "createdAt", "vendorId"]
+    },
+    "VendorProfile": {
+      "title": "VendorProfile",
+      "description": "Subscription and usage data for a vendor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "plan": { "type": "string", "enum": ["free", "pro"] },
+        "dailyOrderCount": { "type": "number" },
+        "lastResetDate": { "type": "string" }
+      },
+      "required": ["id", "email", "plan", "dailyOrderCount", "lastResetDate"]
     },
     "Product": {
       "title": "Product",
@@ -50,22 +79,33 @@
         "category": { "type": "string" },
         "vendorId": { "type": "string" }
       },
-      "required": ["id", "name", "price", "stock", "category", "vendorId"]
+      "required": ["name", "price", "stock", "category", "vendorId"]
+    },
+    "RiderProfile": {
+      "title": "RiderProfile",
+      "description": "Stats and availability for a delivery rider",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "isOnline": { "type": "boolean" },
+        "dailyDeliveries": { "type": "number" },
+        "weeklyDeliveries": { "type": "number" },
+        "totalEarnings": { "type": "number" }
+      },
+      "required": ["id", "email", "isOnline"]
     },
     "UserProfile": {
       "title": "UserProfile",
-      "description": "Information about the partner (Vendor or Rider)",
+      "description": "Multi-role account information",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string" },
-        "displayName": { "type": "string" },
-        "role": { "type": "string", "enum": ["vendor", "rider"] },
-        "status": { "type": "string", "enum": ["online", "offline"] },
-        "storeName": { "type": "string" },
-        "earnings": { "type": "number" }
+        "id": { "type": "string" },
+        "roles": { "type": "array", "items": { "type": "string", "enum": ["vendor", "rider"] } },
+        "displayName": { "type": "string" }
       },
-      "required": ["uid", "email", "role"]
+      "required": ["id", "roles", "displayName"]
     }
   },
   "firestore": {
@@ -76,6 +116,14 @@
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Global orders collection"
+    },
+    "/vendors/{vendorId}": {
+      "schema": "VendorProfile",
+      "description": "Vendor subscription and usage data"
+    },
+    "/riders/{riderId}": {
+      "schema": "RiderProfile",
+      "description": "Rider stats and availability"
     },
     "/products/{productId}": {
       "schema": "Product",

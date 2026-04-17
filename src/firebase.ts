@@ -11,6 +11,10 @@ import firebaseConfig from '../firebase-applet-config.json';
 // Helper to get or create a persistent local ID for the "No Login" experience
 export const getPartnerId = () => {
   if (typeof window === 'undefined') return 'server';
+  
+  // Prefer Firebase Auth UID if authenticated
+  if (auth.currentUser) return auth.currentUser.uid;
+
   let id = localStorage.getItem('quickar_partner_id');
   if (!id) {
     id = 'ptr_' + Math.random().toString(36).substring(2, 9);
@@ -99,3 +103,4 @@ testConnection();
 // Auth Helpers
 export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => signOut(auth);
+export const getUserEmail = () => auth.currentUser?.email || null;

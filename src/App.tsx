@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
-import { UserRole } from './types';
+import { Order, Product, OrderStatus, VendorProfile, RiderProfile, UserProfile } from './types';
+import { subscribeToAvailableOrders, subscribeToRiderOrders, subscribeToRiderProfile, getOrCreateRiderProfile, subscribeToUserProfile, registerUserRole } from './services/firestore';
+import { getPartnerId, getUserEmail } from './firebase';
 import Header from './components/layout/Header';
 import RoleSelector from './components/shared/RoleSelector';
 import VendorDashboard from './components/vendor/Dashboard';
@@ -13,50 +14,46 @@ import RiderDashboard from './components/rider/Dashboard';
 import SettingsScreen from './components/shared/Settings';
 import { AnimatePresence, motion } from 'motion/react';
 import { LayoutDashboard, Store, ClipboardList, Map, History, Settings, UserPlus, Plus } from 'lucide-react';
-import { db } from './firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-// Helper to get or create a persistent local ID for the "No Login" experience
-const getLocalId = () => {
-  let id = localStorage.getItem('quickar_partner_id');
-  if (!id) {
-    id = 'partner_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('quickar_partner_id', id);
-  }
-  return id;
-};
 
 export default function App() {
-  const [partnerId] = useState(getLocalId());
+  const [partnerId] = useState(getPartnerId());
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
-    // Check if we have a saved role/session locally
+    // Check if we have a saved role locally
     const savedRole = localStorage.getItem('quickar_partner_role') as UserRole;
     if (savedRole) {
       setRole(savedRole);
     }
-    setLoading(false);
-  }, []);
+    
+    // Subscribe to multi-role profile
+    const unsub = subscribeToUserProfile(partnerId, (profile) => {
+      setUserProfile(profile);
+      setLoading(false);
+      
+      // If we have a profile but no active role set, pick the first one
+      if (profile && !role && profile.roles.length > 0) {
+        setRole(profile.roles[0]);
+        localStorage.setItem('quickar_partner_role', profile.roles[0]);
+      }
+    });
+
+    return () => unsub();
+  }, [partnerId]);
 
   const handleRegistration = async (selectedRole: UserRole) => {
+    await registerUserRole(partnerId, selectedRole);
     setRole(selectedRole);
     localStorage.setItem('quickar_partner_role', selectedRole);
-    
-    // Save minimal "profile" to firestore so the partner can be found by others
-    try {
-      await setDoc(doc(db, 'users', partnerId), {
-        uid: partnerId,
-        role: selectedRole,
-        isRegistered: true,
-        displayName: selectedRole === 'vendor' ? 'My Local Store' : 'Rider Partner',
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (error) {
-      console.error("Error registering partner:", error);
-    }
+  };
+
+  const handleSwitchRole = (targetRole: UserRole) => {
+    setRole(targetRole);
+    localStorage.setItem('quickar_partner_role', targetRole);
+    setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
@@ -259,15 +256,31 @@ export default function App() {
 
     if (role === 'vendor') {
       switch (activeTab) {
-        case 'dashboard': return <VendorDashboard />;
+        case 'dashboard': return <VendorDashboard onTabChange={setActiveTab} />;
         case 'inventory': return <ProductManager />;
-        case 'settings': return <SettingsScreen role={role} onLogout={handleLogout} />;
+        case 'settings': return (
+          <SettingsScreen 
+            role={role} 
+            userProfile={userProfile}
+            onLogout={handleLogout} 
+            onSwitchRole={handleSwitchRole}
+            onRegisterOtherRole={handleRegistration}
+          />
+        );
         default: return <VendorDashboard />;
       }
     } else {
       switch (activeTab) {
         case 'dashboard': return <RiderDashboard />;
-        case 'settings': return <SettingsScreen role={role} onLogout={handleLogout} />;
+        case 'settings': return (
+          <SettingsScreen 
+            role={role} 
+            userProfile={userProfile}
+            onLogout={handleLogout} 
+            onSwitchRole={handleSwitchRole}
+            onRegisterOtherRole={handleRegistration}
+          />
+        );
         default: return <RiderDashboard />;
       }
     }
@@ -285,8 +298,9 @@ export default function App() {
         {role && activeTab !== 'settings' && (
           <Header 
             role={role} 
-            onRoleSwitch={() => setRole(role === 'vendor' ? 'rider' : 'vendor')} 
+            onRoleSwitch={() => handleSwitchRole(role === 'vendor' ? 'rider' : 'vendor')} 
             onLogout={handleLogout}
+            hasBothRoles={userProfile?.roles.length === 2}
           />
         )}
         

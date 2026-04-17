@@ -4,21 +4,38 @@
  */
 
 import { motion } from 'motion/react';
-import { User, Bell, Shield, Smartphone, HelpCircle, LogOut, ChevronRight, Store, Truck } from 'lucide-react';
-import { UserRole } from '../../types';
+import { User, Bell, Shield, Smartphone, HelpCircle, LogOut, ChevronRight, Store, Truck, UserPlus, Power } from 'lucide-react';
+import { UserRole, UserProfile } from '../../types';
 
 interface SettingsProps {
   role: UserRole;
+  userProfile: UserProfile | null;
   onLogout: () => void;
+  onSwitchRole: (target: UserRole) => void;
+  onRegisterOtherRole: (target: UserRole) => void;
 }
 
-export default function Settings({ role, onLogout }: SettingsProps) {
+export default function Settings({ role, userProfile, onLogout, onSwitchRole, onRegisterOtherRole }: SettingsProps) {
+  const otherRole = role === 'vendor' ? 'rider' : 'vendor';
+  const hasOtherRole = userProfile?.roles.includes(otherRole);
+
   const sections = [
     {
       title: 'Profile',
       items: [
         { icon: role === 'vendor' ? Store : Truck, label: role === 'vendor' ? 'Store Details' : 'Rider Info', value: role === 'vendor' ? 'Quickar Fresh Store' : 'Active Partner' },
         { icon: User, label: 'Account Information', value: 'samiranaskp786@gmail.com' },
+      ]
+    },
+    {
+      title: 'Entity Management',
+      items: [
+        { 
+          icon: hasOtherRole ? Power : UserPlus, 
+          label: hasOtherRole ? `Switch to ${otherRole.charAt(0).toUpperCase() + otherRole.slice(1)} Profile` : `Register as ${otherRole.charAt(0).toUpperCase() + otherRole.slice(1)}`, 
+          onClick: hasOtherRole ? () => onSwitchRole(otherRole) : () => onRegisterOtherRole(otherRole),
+          isAction: true 
+        },
       ]
     },
     {
@@ -56,9 +73,10 @@ export default function Settings({ role, onLogout }: SettingsProps) {
           <div key={section.title}>
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary mb-4 px-2">{section.title}</h3>
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-              {section.items.map((item, idx) => (
+              {section.items.map((item: any, idx) => (
                 <button
                   key={item.label}
+                  onClick={item.onClick}
                   className={`w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors ${
                     idx !== section.items.length - 1 ? 'border-b border-gray-50' : ''
                   }`}
