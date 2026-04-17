@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "OrderItem": {
+      "title": "OrderItem",
+      "description": "A single item within an order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "price": { "type": "number" }
+      },
+      "required": ["id", "name", "quantity", "price"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A delivery order from a customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "address": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "OrderItem" } },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["placed", "accepted", "picked", "out_for_delivery", "delivered", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "vendorId": { "type": "string" },
+        "riderId": { "type": "string" },
+        "coordinates": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        }
+      },
+      "required": ["id", "customerName", "address", "total", "status", "createdAt", "vendorId"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "An item available for sale in a store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "category": { "type": "string" },
+        "vendorId": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "stock", "category", "vendorId"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Information about the partner (Vendor or Rider)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["vendor", "rider"] },
+        "status": { "type": "string", "enum": ["online", "offline"] },
+        "storeName": { "type": "string" },
+        "earnings": { "type": "number" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Partner user profiles"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Global orders collection"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Products across all stores"
+    }
+  }
+}

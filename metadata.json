@@ -1,0 +1,8 @@
+{
+  "name": "Quickar Partner",
+  "description": "The partner app for Quickar vendors and riders to manage orders and deliveries.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
