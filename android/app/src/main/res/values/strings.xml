@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Quickar Partner</string>
+    <string name="title_activity_main">Quickar Partner</string>
+    <string name="package_name">com.quickar.partner</string>
+    <string name="custom_url_scheme">com.quickar.partner</string>
+</resources>

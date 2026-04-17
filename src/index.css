@@ -14,6 +14,32 @@
 @layer base {
   body {
     @apply bg-secondary text-text-primary font-sans;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  input, textarea {
+    user-select: text;
+  }
+
+  /* Smooth scrolling for mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer utilities {
+  .mobile-blur {
+    @apply backdrop-blur-xl bg-white/80 border-t border-gray-100/50;
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .tap-bounce {
+    @apply active:scale-95 transition-transform;
   }
 }
 

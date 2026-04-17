@@ -10,8 +10,9 @@ import RoleSelector from './components/shared/RoleSelector';
 import VendorDashboard from './components/vendor/Dashboard';
 import ProductManager from './components/vendor/ProductManager';
 import RiderDashboard from './components/rider/Dashboard';
+import SettingsScreen from './components/shared/Settings';
 import { AnimatePresence, motion } from 'motion/react';
-import { LayoutDashboard, Store, ClipboardList, Map, History, Settings, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Store, ClipboardList, Map, History, Settings, UserPlus, Plus } from 'lucide-react';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -63,6 +64,16 @@ export default function App() {
     setRole(null);
     setActiveTab('dashboard');
   };
+
+  const [showInstallTip, setShowInstallTip] = useState(false);
+
+  useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (isMobile && !isStandalone) {
+      setShowInstallTip(true);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -122,6 +133,30 @@ export default function App() {
           </div>
           
           <p className="fixed bottom-12 left-0 right-0 text-[10px] text-white/40 uppercase tracking-widest font-bold">"Delivered Before You Blink"</p>
+
+          {showInstallTip && (
+            <motion.div 
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              className="fixed bottom-4 left-4 right-4 bg-white text-primary p-4 rounded-2xl shadow-2xl border border-accent/20 flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-accent p-2 rounded-lg text-white">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-bold">Install Quickar App</div>
+                  <div className="text-[10px] opacity-70">Add to home screen for native experience</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowInstallTip(false)}
+                className="text-primary/40 hover:text-primary"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
     );
@@ -129,16 +164,16 @@ export default function App() {
 
   const navItems = {
     vendor: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { id: 'inventory', label: 'Inventory', icon: Store },
+      { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
+      { id: 'inventory', label: 'Stock', icon: Store },
       { id: 'orders', label: 'Orders', icon: ClipboardList },
-      { id: 'settings', label: 'Store Settings', icon: Settings },
+      { id: 'settings', label: 'Profile', icon: Settings },
     ],
     rider: [
-      { id: 'dashboard', label: 'Earnings', icon: LayoutDashboard },
-      { id: 'delivery', label: 'Active Delivery', icon: Map },
-      { id: 'history', label: 'History', icon: History },
-      { id: 'settings', label: 'Profile', icon: Settings },
+      { id: 'dashboard', label: 'Earn', icon: LayoutDashboard },
+      { id: 'delivery', label: 'Live', icon: Map },
+      { id: 'history', label: 'Log', icon: History },
+      { id: 'settings', label: 'User', icon: Settings },
     ]
   };
 
@@ -147,81 +182,63 @@ export default function App() {
       switch (activeTab) {
         case 'dashboard': return <VendorDashboard />;
         case 'inventory': return <ProductManager />;
+        case 'settings': return <SettingsScreen role={role} onLogout={handleLogout} />;
         default: return <VendorDashboard />;
       }
     } else {
       switch (activeTab) {
         case 'dashboard': return <RiderDashboard />;
+        case 'settings': return <SettingsScreen role={role} onLogout={handleLogout} />;
         default: return <RiderDashboard />;
       }
     }
   };
 
   return (
-    <div className="min-h-screen bg-secondary pb-20 md:pb-0">
-      <Header 
-        role={role} 
-        onRoleSwitch={() => setRole(role === 'vendor' ? 'rider' : 'vendor')} 
-        onLogout={handleLogout}
-      />
+    <div className="min-h-screen bg-secondary overflow-x-hidden">
+      {/* Mobile Header Shell */}
+      {activeTab !== 'settings' && (
+        <Header 
+          role={role} 
+          onRoleSwitch={() => setRole(role === 'vendor' ? 'rider' : 'vendor')} 
+          onLogout={handleLogout}
+        />
+      )}
       
-      <div className="flex">
-        {/* Sidebar for Desktop */}
-        <aside className="hidden md:flex flex-col w-64 h-[calc(100vh-64px)] bg-white border-r border-gray-100 p-4 sticky top-16">
-          <nav className="space-y-2 flex-1">
-            {navItems[role].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all ${
-                  activeTab === item.id 
-                    ? 'bg-accent text-white shadow-lg shadow-accent/20' 
-                    : 'text-text-secondary hover:bg-secondary hover:text-primary'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
-          
-          <div className="p-4 bg-primary/5 rounded-2xl">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-text-secondary mb-1">Status</p>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-semibold">Active & Online</span>
-            </div>
-          </div>
-        </aside>
+      {/* Mobile-First Main View */}
+      <main className={`min-h-screen ${activeTab === 'settings' ? '' : 'pb-24 pt-4'}`}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab + role}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
+      </main>
 
-        {/* Main Content */}
-        <main className="flex-1 min-w-0">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab + role}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              {renderContent()}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
-
-      {/* Mobile Navigation Rail */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-2 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+      {/* Floating App Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex justify-around items-center p-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] h-20 px-6">
         {navItems[role].map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center p-2 min-w-[64px] transition-colors ${
-              activeTab === item.id ? 'text-accent' : 'text-text-secondary'
+            className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all relative ${
+              activeTab === item.id ? 'text-accent' : 'text-text-secondary opacity-50'
             }`}
           >
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1 uppercase tracking-tighter">{item.label.split(' ')[0]}</span>
+            {activeTab === item.id && (
+              <motion.div 
+                layoutId="activeTabGlow"
+                className="absolute inset-0 bg-accent/10 rounded-2xl -z-10"
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'scale-110' : ''} transition-transform`} />
+            <span className="text-[9px] font-bold mt-1 uppercase tracking-wider">{item.label}</span>
           </button>
         ))}
       </nav>
